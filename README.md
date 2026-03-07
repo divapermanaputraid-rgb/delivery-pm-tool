@@ -7,35 +7,32 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748)
 
-DeliveryFlow adalah internal tool untuk membantu **Project Manager memonitor delivery software development** melalui:
+# Delivery PM Tool
 
-- task tracking
-- GitHub activity monitoring
-- milestone progress
-- weekly reporting
+Backend-first MVP for software delivery tracking with GitHub-linked visibility.
 
-Project ini dibuat sebagai **alternatif ringan dari Jira** untuk tim software development kecil.
+## Monorepo structure
 
----
+- `apps/web` — Next.js frontend shell
+- `apps/api` — Express API
+- `packages/db` — shared database package placeholder
+- `packages/shared` — shared package placeholder
 
-# Tech Stack
+## Day 1 status
 
-### Backend
+- Monorepo workspace ready
+- Web shell ready
+- API foundation ready
+- Health check ready
+- Root JSON route ready
+- 404 JSON handler ready
+- Global error handler ready
 
-- Node.js
-- Express
-- TypeScript
-- Prisma ORM
-- PostgreSQL
-- Redis
-- BullMQ
-- Octokit (GitHub API)
+## Commands
 
-### Frontend
-
-- Next.js
-- React
-- TypeScript (TSX)
-- Fetch API
-
----
+```bash
+pnpm dev:web
+pnpm dev:api
+pnpm build:web
+pnpm build:api
+```
