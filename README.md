@@ -9,24 +9,26 @@
 
 # Delivery PM Tool
 
-Backend-first MVP for software delivery tracking with GitHub-linked visibility.
+Backend-first MVP for software delivery tracking with GitHub-linked visibility, built as a pnpm monorepo.
 
 ## Monorepo structure
 
 - `apps/web` — Next.js frontend shell
-- `apps/api` — Express API
-- `packages/db` — shared database package placeholder
+- `apps/api` — Express API with standardized responses, validation, and error handling
+- `packages/db` — shared Prisma + PostgreSQL package (schema, migrations, generated client)
 - `packages/shared` — shared package placeholder
 
-## Day 1 status
+## status
 
 - Monorepo workspace ready
 - Web shell ready
 - API foundation ready
-- Health check ready
-- Root JSON route ready
-- 404 JSON handler ready
-- Global error handler ready
+- Health and root JSON routes ready
+- API version route (`/api/v1`) ready
+- Request ID and request logger middleware ready
+- Request validation and global error handling ready
+- Prisma database package and initial migration ready
+- DB and project-flow test scripts ready
 
 ## Commands
 
@@ -35,4 +37,9 @@ pnpm dev:web
 pnpm dev:api
 pnpm build:web
 pnpm build:api
+pnpm lint:web
+pnpm --dir packages/db generate
+pnpm --dir packages/db build
+pnpm --dir apps/api test:db
+pnpm --dir apps/api test:project-flow
 ```
