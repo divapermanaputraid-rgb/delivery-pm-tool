@@ -16,6 +16,7 @@ export function errorHandler(
       statusCode: error.statusCode,
       code: error.code,
       message: error.message,
+      meta: error.meta,
     });
   }
 

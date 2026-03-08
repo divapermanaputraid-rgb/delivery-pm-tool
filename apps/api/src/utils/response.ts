@@ -18,7 +18,7 @@ type ErrorResponse = {
   };
   meta: {
     requestId: string;
-  };
+  } & Record<string, unknown>;
 };
 
 function getRequestId(res: Response): string {
@@ -50,6 +50,7 @@ export function sendError(
     statusCode: number;
     code: string;
     message: string;
+    meta?: Record<string, unknown>;
   },
 ) {
   const body: ErrorResponse = {
@@ -60,6 +61,7 @@ export function sendError(
     },
     meta: {
       requestId: getRequestId(res),
+      ...(options.meta ?? {}),
     },
   };
   return res.status(options.statusCode).json(body);
