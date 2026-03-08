@@ -1,8 +1,6 @@
 import app from "./app.js";
+import { appConfig } from "./config/app.js";
 
-const PORT = 3001;
-
-app.listen(PORT, () => {
-    console.log(`API listening on http//localhost:${PORT}`);
+app.listen(appConfig.port, () => {
+  console.log(`API listening on http://localhost:${appConfig.port}`);
 });
-

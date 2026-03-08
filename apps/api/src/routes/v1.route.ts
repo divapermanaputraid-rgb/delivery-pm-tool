@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { appConfig } from "../config/app.js";
-const rootRouter = Router();
 
-rootRouter.get("/", (_req, res) => {
+const v1Router = Router();
+
+v1Router.get("/", (_req, res) => {
   res.json({
     name: appConfig.appName,
     version: appConfig.apiVersion,
-    status: "running",
+    basePath: appConfig.apiPrefix,
+    status: "ok",
   });
 });
 
-export default rootRouter;
+export default v1Router;
