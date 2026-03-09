@@ -8,7 +8,10 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test:db": "tsx src/scripts/test-db-connection.ts",
-    "test:project-flow": "tsx src/scripts/test-project-flow.ts"
+    "test:project-flow": "tsx src/scripts/test-project-flow.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:project-http": "vitest run tests/project.http.test.ts"
   },
   "dependencies": {
     "@delivery-pm-tool/db": "workspace:*",
@@ -19,7 +22,10 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.37",
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
