@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { appConfig } from "../config/app.js";
 import { sendSuccess } from "../utils/response.js";
+import { projectRouter } from "../modules/project/project.route.js";
 
 const v1Router = Router();
 
@@ -12,5 +13,7 @@ v1Router.get("/", (_req, res) => {
     status: "ok",
   });
 });
+
+v1Router.use("/projects", projectRouter);
 
 export default v1Router;

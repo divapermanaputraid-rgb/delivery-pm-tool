@@ -1,7 +1,7 @@
 import { db } from "../lib/db.js";
 import {
   createProject,
-  listRecentProjects,
+  listProjects,
 } from "../modules/project/project.service.js";
 
 async function main() {
@@ -11,9 +11,9 @@ async function main() {
 
   console.log("Created project:", createdProject);
 
-  const projects = await listRecentProjects(5);
+  const projects = await listProjects();
 
-  console.log("Recent projects:", projects);
+  console.log("Recent projects:", projects.slice(0, 5));
 
   await db.$disconnect();
 }

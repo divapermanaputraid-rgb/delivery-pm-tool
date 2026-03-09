@@ -1,18 +1,29 @@
 import { db } from "../../lib/db.js";
 
-export async function createProject(input: { name: string }) {
+type CreateProjectInput = {
+  name: string;
+};
+
+export async function createProject(input: CreateProjectInput) {
   return db.project.create({
     data: {
-      name: input.name,
+      name: input.name.trim(),
     },
   });
 }
 
-export async function listRecentProjects(limit = 5) {
+export async function listProjects() {
   return db.project.findMany({
     orderBy: {
       createdAt: "desc",
     },
-    take: limit,
+  });
+}
+
+export async function getProjectById(projectId: string) {
+  return db.project.findUnique({
+    where: {
+      id: projectId,
+    },
   });
 }
