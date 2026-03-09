@@ -9,9 +9,11 @@ export function errorHandler(
   _next: NextFunction,
 ) {
   const requestId = res.locals.requestId ?? "unknown";
-  console.error(`[${requestId}]`, error);
 
   if (error instanceof AppError) {
+    if (error.statusCode >= 500) {
+      console.error(`[${requestId}]`, error);
+    }
     return sendError(res, {
       statusCode: error.statusCode,
       code: error.code,
@@ -20,6 +22,7 @@ export function errorHandler(
     });
   }
 
+  console.error(`[${requestId}]`, error);
   return sendError(res, {
     statusCode: 500,
     code: "INTERNAL_SERVER_ERROR",
