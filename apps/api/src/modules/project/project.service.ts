@@ -12,11 +12,12 @@ export async function createProject(input: ProjectNameInput) {
   });
 }
 
-export async function listProjects() {
+export async function listProjects(limit?: number) {
   return db.project.findMany({
     orderBy: {
       createdAt: "desc",
     },
+    ...(limit !== undefined ? { take: limit } : {}),
   });
 }
 
@@ -38,6 +39,14 @@ export async function updateProject(
     },
     data: {
       name: input.name.trim(),
+    },
+  });
+}
+
+export async function deleteProject(projectId: string) {
+  return db.project.delete({
+    where: {
+      id: projectId,
     },
   });
 }
