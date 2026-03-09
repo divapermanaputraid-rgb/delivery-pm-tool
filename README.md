@@ -28,7 +28,13 @@ Backend-first MVP for software delivery tracking with GitHub-linked visibility, 
 - Request ID and request logger middleware ready
 - Request validation and global error handling ready
 - Prisma database package and initial migration ready
-- DB and project-flow test scripts ready
+- Project routes ready:
+  - `GET /api/v1/projects` (supports optional `?limit=...`, max `100`)
+  - `GET /api/v1/projects/:projectId`
+  - `POST /api/v1/projects`
+  - `PATCH /api/v1/projects/:projectId`
+  - `DELETE /api/v1/projects/:projectId`
+- DB scripts, project-flow script, and API HTTP tests ready
 
 ## Commands
 
@@ -42,4 +48,7 @@ pnpm --dir packages/db generate
 pnpm --dir packages/db build
 pnpm --dir apps/api test:db
 pnpm --dir apps/api test:project-flow
+pnpm --dir apps/api test
+pnpm --dir apps/api test:project-http
+pnpm --dir apps/api test:watch
 ```
