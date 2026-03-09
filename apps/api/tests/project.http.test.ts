@@ -1,8 +1,8 @@
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
+
 import app from "../src/app.js";
 import { db } from "../src/lib/db.js";
-import { response } from "express";
 
 const createdProjectIds: string[] = [];
 
@@ -53,7 +53,7 @@ describe("Project HTTP routes", () => {
   });
 
   it("GET /api/v1/projects/:projectId should return project detail", async () => {
-    const name = `Project Detail test ${Date.now()}`;
+    const name = `Project Detail Test ${Date.now()}`;
 
     const createdResponse = await request(app)
       .post("/api/v1/projects")
@@ -86,7 +86,79 @@ describe("Project HTTP routes", () => {
     expect(typeof response.body.meta.requestId).toBe("string");
     expect(typeof response.headers["x-request-id"]).toBe("string");
   });
+
+  it("PATCH /api/v1/projects/:projectId should update project name", async () => {
+    const initialName = `Project Update Test ${Date.now()}`;
+    const updatedName = `Updated Project ${Date.now()}`;
+
+    const createdResponse = await request(app)
+      .post("/api/v1/projects")
+      .send({ name: initialName });
+
+    expect(createdResponse.status).toBe(201);
+
+    const projectId = createdResponse.body.data.project.id;
+    createdProjectIds.push(projectId);
+
+    const response = await request(app)
+      .patch(`/api/v1/projects/${projectId}`)
+      .send({ name: updatedName });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.project.id).toBe(projectId);
+    expect(response.body.data.project.name).toBe(updatedName);
+    expect(typeof response.body.meta.requestId).toBe("string");
+    expect(typeof response.headers["x-request-id"]).toBe("string");
+  });
+
+  it("PATCH /api/v1/projects/:projectId should return 404 when project does not exist", async () => {
+    const response = await request(app)
+      .patch("/api/v1/projects/not-found-id")
+      .send({ name: "Updated Missing Project" });
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+    expect(response.body.error.message).toBe(
+      "Project with id not-found-id not found",
+    );
+    expect(typeof response.body.meta.requestId).toBe("string");
+    expect(typeof response.headers["x-request-id"]).toBe("string");
+  });
+
+  it("PATCH /api/v1/projects/:projectId should reject invalid payload", async () => {
+    const initialName = `Project Invalid Update Test ${Date.now()}`;
+
+    const createdResponse = await request(app)
+      .post("/api/v1/projects")
+      .send({ name: initialName });
+
+    expect(createdResponse.status).toBe(201);
+
+    const projectId = createdResponse.body.data.project.id;
+    createdProjectIds.push(projectId);
+
+    const response = await request(app)
+      .patch(`/api/v1/projects/${projectId}`)
+      .send({ name: " " });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.meta.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "name",
+          message: "Project name is required",
+        }),
+      ]),
+    );
+    expect(typeof response.body.meta.requestId).toBe("string");
+    expect(typeof response.headers["x-request-id"]).toBe("string");
+  });
 });
+
 afterAll(async () => {
   if (createdProjectIds.length > 0) {
     await db.project.deleteMany({
@@ -97,5 +169,6 @@ afterAll(async () => {
       },
     });
   }
+
   await db.$disconnect();
 });
