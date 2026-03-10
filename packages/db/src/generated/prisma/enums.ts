@@ -9,7 +9,31 @@
 * 🟢 You can import this file directly.
 */
 
+export const TaskStatus = {
+  BACKLOG: 'BACKLOG',
+  READY: 'READY',
+  IN_PROGRESS: 'IN_PROGRESS',
+  IN_REVIEW: 'IN_REVIEW',
+  BLOCKED: 'BLOCKED',
+  DONE: 'DONE'
+} as const
+
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const TaskType = {
+  FEATURE: 'FEATURE',
+  BUG: 'BUG',
+  IMPROVEMENT: 'IMPROVEMENT',
+  TASK: 'TASK'
+} as const
+
+export type TaskType = (typeof TaskType)[keyof typeof TaskType]
+
+
+export const TaskTrackingMode = {
+  MANUAL: 'MANUAL',
+  CODE_LINKED: 'CODE_LINKED'
+} as const
+
+export type TaskTrackingMode = (typeof TaskTrackingMode)[keyof typeof TaskTrackingMode]

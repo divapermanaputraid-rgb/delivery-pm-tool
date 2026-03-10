@@ -7,9 +7,58 @@ datasource db {
     provider = "postgresql"
 }
 
+enum TaskStatus {
+    BACKLOG
+    READY
+    IN_PROGRESS
+    IN_REVIEW
+    BLOCKED
+    DONE
+}
+
+enum TaskType {
+    FEATURE
+    BUG
+    IMPROVEMENT
+    TASK
+}
+
+enum TaskTrackingMode {
+    MANUAL
+    CODE_LINKED
+}
+
 model Project {
     id        String   @id @default(cuid())
     name      String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    tasks     Task[]
+}
+
+model Task {
+    id             String           @id @default(cuid())
+    projectId      String
+    code           String
+    title          String
+    description    String?
+    status         TaskStatus       @default(BACKLOG)
+    type           TaskType         @default(TASK)
+    priority       String?
+    discipline     String?
+    dueDate        DateTime?
+    startedAt      DateTime?
+    completedAt    DateTime?
+    trackingMode   TaskTrackingMode @default(MANUAL)
+    riskFlag       Boolean          @default(false)
+    lastActivityAt DateTime?
+    createdAt      DateTime         @default(now())
+    updatedAt      DateTime         @updatedAt
+
+    project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+    @@unique([projectId, code])
+    @@index([projectId])
+    @@index([projectId, status])
+    @@index([projectId, dueDate])
 }

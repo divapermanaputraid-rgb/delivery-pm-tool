@@ -6,5 +6,6 @@ build
 .env
 .env.*
 !.env.example
+apps/api/src/scripts/task-runtime-proof.ts
 coverage
 .DS_Store
