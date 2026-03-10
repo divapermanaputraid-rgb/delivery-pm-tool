@@ -5,6 +5,7 @@ import app from "../src/app.js";
 import { db } from "../src/lib/db.js";
 
 const createdProjectIds: string[] = [];
+const createdTaskIds: string[] = [];
 
 describe("Project HTTP routes", () => {
   it("GET /api/v1/projects should return project list", async () => {
@@ -239,7 +240,155 @@ it("GET /api/v1/projects should reject invalid limit query", async () => {
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
 
+it("POST /api/v1/projects/:projectId/tasks should create task", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Create Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-${Date.now()}`,
+      title: "First task",
+    });
+
+  expect(response.status).toBe(201);
+  expect(response.body.success).toBe(true);
+  expect(typeof response.body.data.task.id).toBe("string");
+  expect(response.body.data.task.projectId).toBe(projectId);
+  expect(response.body.data.task.title).toBe("First task");
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+
+  createdTaskIds.push(response.body.data.task.id);
+});
+
+it("POST /api/v1/projects/:projectId/tasks should reject invalid payload", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Invalid Payload test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: " ",
+      title: " ",
+    });
+
+  expect(response.status).toBe(400);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  expect(response.body.meta.details).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        field: "code",
+        message: "Task code is required",
+      }),
+      expect.objectContaining({
+        field: "title",
+        message: "Task title is required",
+      }),
+    ]),
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("POST /api/v1/projects/:projectId/tasks should return 404 when project does not exist", async () => {
+  const response = await request(app)
+    .post("/api/v1/projects/not-found-id/tasks")
+    .send({
+      code: `TASK-${Date.now()}`,
+      title: "Missing project task",
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/tasks should return task list", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task List Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const firstTaskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-${Date.now()}-1`,
+      title: "Task One",
+    });
+
+  expect(firstTaskResponse.status).toBe(201);
+  createdTaskIds.push(firstTaskResponse.body.data.task.id);
+
+  const secondTaskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-${Date.now()}-2`,
+      title: "Task Two",
+    });
+
+  expect(secondTaskResponse.status).toBe(201);
+  createdTaskIds.push(secondTaskResponse.body.data.task.id);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/tasks`,
+  );
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(Array.isArray(response.body.data.tasks)).toBe(true);
+  expect(response.body.data.tasks.length).toBeGreaterThanOrEqual(2);
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/tasks should return 404 when project does not exist", async () => {
+  const response = await request(app).get(
+    "/api/v1/projects/not-found-id/tasks",
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
 afterAll(async () => {
+  if (createdTaskIds.length > 0) {
+    await db.task.deleteMany({
+      where: {
+        id: {
+          in: createdTaskIds,
+        },
+      },
+    });
+  }
   if (createdProjectIds.length > 0) {
     await db.project.deleteMany({
       where: {
@@ -249,6 +398,5 @@ afterAll(async () => {
       },
     });
   }
-
-  await db.$disconnect();
+  await db.$disconnect;
 });

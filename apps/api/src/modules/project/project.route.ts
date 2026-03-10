@@ -12,6 +12,8 @@ import {
   updateProject,
 } from "./project.service.js";
 
+import { taskRouter } from "../task/task.route.js";
+
 const projectRouter = Router();
 
 function getProjectIdParam(projectIdParam: string | string[]) {
@@ -62,6 +64,8 @@ function parseLimitQuery(limitValue: unknown) {
   }
   return Math.min(limit, 100);
 }
+
+projectRouter.use("/:projectId/tasks", taskRouter);
 
 projectRouter.get("/", async (req, res, next) => {
   try {
