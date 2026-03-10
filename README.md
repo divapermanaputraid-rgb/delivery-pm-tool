@@ -34,7 +34,12 @@ Backend-first MVP for software delivery tracking with GitHub-linked visibility, 
   - `POST /api/v1/projects`
   - `PATCH /api/v1/projects/:projectId`
   - `DELETE /api/v1/projects/:projectId`
-- DB scripts, project-flow script, and API HTTP tests ready
+- Task routes ready:
+  - `GET /api/v1/projects/:projectId/tasks`
+  - `GET /api/v1/projects/:projectId/tasks/:taskId`
+  - `POST /api/v1/projects/:projectId/tasks`
+  - Error contracts: `PROJECT_NOT_FOUND`, `TASK_NOT_FOUND`, `TASK_CODE_ALREADY_EXISTS`
+- DB scripts, project-flow script, task runtime script, and API HTTP tests ready
 
 ## Commands
 

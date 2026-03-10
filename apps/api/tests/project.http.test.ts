@@ -379,6 +379,119 @@ it("GET /api/v1/projects/:projectId/tasks should return 404 when project does no
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
 
+it("POST /api/v1/projects/:projectId/tasks should return 409 when task code already exists in the same project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Duplicate Code Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskCode = `TASK-DUPLICATE-${Date.now()}`;
+
+  const firstResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: taskCode,
+      title: "First duplicate candidate",
+    });
+
+  expect(firstResponse.status).toBe(201);
+  createdTaskIds.push(firstResponse.body.data.task.id);
+
+  const secondResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: taskCode,
+      title: "Second duplicate candidate",
+    });
+
+  expect(secondResponse.status).toBe(409);
+  expect(secondResponse.body.success).toBe(false);
+  expect(secondResponse.body.error.code).toBe("TASK_CODE_ALREADY_EXISTS");
+  expect(secondResponse.body.error.message).toBe(
+    `Task code ${taskCode} already exists in this project`,
+  );
+  expect(typeof secondResponse.body.meta.requestId).toBe("string");
+  expect(typeof secondResponse.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/tasks/:taskId should return task detail", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Detail Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-DETAIL-${Date.now()}`,
+      title: "Task Detail Target",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/tasks/${taskId}`,
+  );
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.task.id).toBe(taskId);
+  expect(response.body.data.task.projectId).toBe(projectId);
+  expect(response.body.data.task.title).toBe("Task Detail Target");
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/tasks/:taskId should return 404 when project does not exist", async () => {
+  const response = await request(app).get(
+    "/api/v1/projects/not-found-id/tasks/not-found-task-id",
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/tasks/:taskId should return 404 when task does not exist in the project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Missing Task Detail Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/tasks/not-found-task-id`,
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("TASK_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Task with id not-found-task-id not found in project ${projectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
 afterAll(async () => {
   if (createdTaskIds.length > 0) {
     await db.task.deleteMany({
@@ -398,5 +511,5 @@ afterAll(async () => {
       },
     });
   }
-  await db.$disconnect;
+  await db.$disconnect();
 });
