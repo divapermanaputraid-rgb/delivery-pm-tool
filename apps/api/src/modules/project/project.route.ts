@@ -13,6 +13,7 @@ import {
 } from "./project.service.js";
 
 import { taskRouter } from "../task/task.route.js";
+import { milestoneRouter } from "../milestone/milestone.route.js";
 
 const projectRouter = Router();
 
@@ -66,6 +67,7 @@ function parseLimitQuery(limitValue: unknown) {
 }
 
 projectRouter.use("/:projectId/tasks", taskRouter);
+projectRouter.use("/:projectId/milestones", milestoneRouter);
 
 projectRouter.get("/", async (req, res, next) => {
   try {
