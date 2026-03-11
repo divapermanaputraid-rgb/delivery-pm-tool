@@ -37,3 +37,12 @@ export const TaskTrackingMode = {
 } as const
 
 export type TaskTrackingMode = (typeof TaskTrackingMode)[keyof typeof TaskTrackingMode]
+
+
+export const MilestoneStatus = {
+  PLANNED: 'PLANNED',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED'
+} as const
+
+export type MilestoneStatus = (typeof MilestoneStatus)[keyof typeof MilestoneStatus]

@@ -28,12 +28,19 @@ enum TaskTrackingMode {
     CODE_LINKED
 }
 
+enum MilestoneStatus {
+    PLANNED
+    ACTIVE
+    COMPLETED
+}
+
 model Project {
-    id        String   @id @default(cuid())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    tasks     Task[]
+    id         String      @id @default(cuid())
+    name       String
+    createdAt  DateTime    @default(now())
+    updatedAt  DateTime    @updatedAt
+    tasks      Task[]
+    milestones Milestone[]
 }
 
 model Task {
@@ -58,6 +65,24 @@ model Task {
     project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
     @@unique([projectId, code])
+    @@index([projectId])
+    @@index([projectId, status])
+    @@index([projectId, dueDate])
+}
+
+model Milestone {
+    id          String          @id @default(cuid())
+    projectId   String
+    name        String
+    description String?
+    startDate   DateTime?
+    dueDate     DateTime?
+    status      MilestoneStatus @default(PLANNED)
+    createdAt   DateTime        @default(now())
+    updateAt    DateTime        @updatedAt
+
+    project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
     @@index([projectId])
     @@index([projectId, status])
     @@index([projectId, dueDate])
