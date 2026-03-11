@@ -192,6 +192,41 @@ const createTaskHandler: RequestHandler<
   }
 };
 
+const deleteTaskHandler: RequestHandler<TaskDetailRouteParams> = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const project = await getProjectById(projectId);
+
+    if (!project) {
+      return next(buildProjectNotFoundError(projectId));
+    }
+
+    const existingTask = await getTaskByIdAndProjectId(projectId, taskId);
+
+    if (!existingTask) {
+      return next(buildTaskNotFoundError(projectId, taskId));
+    }
+
+    const task = await deleteTaskById(taskId);
+
+    return sendSuccess(
+      res,
+      {
+        task,
+      },
+      {
+        statusCode: 200,
+      },
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 taskRouter.get("/", listTasksHandler);
 taskRouter.get("/:taskId", getTaskDetailHandler);
 taskRouter.post("/", validateRequest(createTaskSchema), createTaskHandler);
@@ -200,4 +235,5 @@ taskRouter.patch(
   validateRequest(updateTaskSchema),
   updateTaskHandler,
 );
+taskRouter.delete("/:taskId", deleteTaskHandler);
 export { taskRouter };
