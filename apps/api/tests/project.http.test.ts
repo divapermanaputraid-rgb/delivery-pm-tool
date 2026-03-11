@@ -705,6 +705,89 @@ it("PATCH /api/v1/projects/:projectId/tasks/:taskId should allow clearing nullab
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
 
+it("DELETE /api/v1/projects/:projectId/tasks/:taskId should delete task", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Delete Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-DELETE-${Date.now()}`,
+      title: "Task Delete Target",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+
+  const deleteResponse = await request(app).delete(
+    `/api/v1/projects/${projectId}/tasks/${taskId}`,
+  );
+
+  expect(deleteResponse.status).toBe(200);
+  expect(deleteResponse.body.success).toBe(true);
+  expect(deleteResponse.body.data.task.id).toBe(taskId);
+  expect(deleteResponse.body.data.task.projectId).toBe(projectId);
+  expect(deleteResponse.body.data.task.title).toBe("Task Delete Target");
+  expect(typeof deleteResponse.body.meta.requestId).toBe("string");
+  expect(typeof deleteResponse.headers["x-request-id"]).toBe("string");
+
+  const detailResponse = await request(app).get(
+    `/api/v1/projects/${projectId}/tasks/${taskId}`,
+  );
+
+  expect(detailResponse.status).toBe(404);
+  expect(detailResponse.body.success).toBe(false);
+  expect(detailResponse.body.error.code).toBe("TASK_NOT_FOUND");
+  expect(detailResponse.body.error.message).toBe(
+    `Task with id ${taskId} not found in project ${projectId}`,
+  );
+});
+
+it("DELETE /api/v1/projects/:projectId/tasks/:taskId should return 404 when project does not exist", async () => {
+  const response = await request(app).delete(
+    "/api/v1/projects/not-found-id/tasks/not-found-task-id",
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("DELETE /api/v1/projects/:projectId/tasks/:taskId should return 404 when task does not exist in the project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Missing Task Delete Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app).delete(
+    `/api/v1/projects/${projectId}/tasks/not-found-task-id`,
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("TASK_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Task with id not-found-task-id not found in project ${projectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
 afterAll(async () => {
   if (createdTaskIds.length > 0) {
     await db.task.deleteMany({
