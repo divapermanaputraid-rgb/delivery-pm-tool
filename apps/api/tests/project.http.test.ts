@@ -492,6 +492,219 @@ it("GET /api/v1/projects/:projectId/tasks/:taskId should return 404 when task do
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
 
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should update task", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Update Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-UPDATE-${Date.now()}`,
+      title: "Initial task title",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${taskId}`)
+    .send({
+      title: "Updated task title",
+      status: "IN_PROGRESS",
+      riskFlag: true,
+    });
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.task.id).toBe(taskId);
+  expect(response.body.data.task.projectId).toBe(projectId);
+  expect(response.body.data.task.title).toBe("Updated task title");
+  expect(response.body.data.task.status).toBe("IN_PROGRESS");
+  expect(response.body.data.task.riskFlag).toBe(true);
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should reject empty payload", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Empty Update Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-EMPTY-${Date.now()}`,
+      title: "Task Empty Update Target",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${taskId}`)
+    .send({});
+
+  expect(response.status).toBe(400);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  expect(response.body.meta.details).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        field: "body",
+        message: "At least one field must be provided",
+      }),
+    ]),
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should return 404 when project does not exist", async () => {
+  const response = await request(app)
+    .patch("/api/v1/projects/not-found-id/tasks/not-found-task-id")
+    .send({
+      title: "Should fail",
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should return 404 when task does not exist in the project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Missing Task Update Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/not-found-task-id`)
+    .send({
+      title: "Should fail",
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("TASK_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Task with id not-found-task-id not found in project ${projectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should return 409 when task code already exists in the same project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Update Duplicate Code Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const firstTaskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-UPDATE-DUPLICATE-A-${Date.now()}`,
+      title: "First task",
+    });
+
+  expect(firstTaskResponse.status).toBe(201);
+  const firstTaskId = firstTaskResponse.body.data.task.id;
+  createdTaskIds.push(firstTaskId);
+
+  const duplicateCode = `TASK-UPDATE-DUPLICATE-B-${Date.now()}`;
+
+  const secondTaskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: duplicateCode,
+      title: "Second task",
+    });
+
+  expect(secondTaskResponse.status).toBe(201);
+  createdTaskIds.push(secondTaskResponse.body.data.task.id);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${firstTaskId}`)
+    .send({
+      code: duplicateCode,
+    });
+
+  expect(response.status).toBe(409);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("TASK_CODE_ALREADY_EXISTS");
+  expect(response.body.error.message).toBe(
+    `Task code ${duplicateCode} already exists in this project`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should allow clearing nullable fields", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Clear Nullable Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-CLEAR-${Date.now()}`,
+      title: "Task Clear Target",
+      description: "temporary",
+      dueDate: "2026-03-11T10:00:00.000Z",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${taskId}`)
+    .send({
+      description: null,
+      dueDate: null,
+    });
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.task.description).toBeNull();
+  expect(response.body.data.task.dueDate).toBeNull();
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
 afterAll(async () => {
   if (createdTaskIds.length > 0) {
     await db.task.deleteMany({

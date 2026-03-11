@@ -55,3 +55,26 @@ export const createTaskSchema = z.object({
   riskFlag: z.boolean().optional(),
   lastActivityAt: isoDatetimeSchema.optional(),
 });
+
+export const updateTaskSchema = z
+  .object({
+    code: taskCodeSchema.optional(),
+    title: taskTitleSchema.optional(),
+    description: taskDescriptionSchema.nullable().optional(),
+    status: taskStatusSchema.optional(),
+    type: taskTypeSchema.optional(),
+    priority: optionalTrimmedString("Task priority", 50).nullable().optional(),
+    discipline: optionalTrimmedString("Task discipline", 50)
+      .nullable()
+      .optional(),
+    dueDate: isoDatetimeSchema.nullable().optional(),
+    startedAt: isoDatetimeSchema.nullable().optional(),
+    completedAt: isoDatetimeSchema.nullable().optional(),
+    trackingMode: taskTrackingModeSchema.optional(),
+    riskFlag: z.boolean().optional(),
+    lastActivityAt: isoDatetimeSchema.nullable().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+    path: [],
+  });

@@ -5,11 +5,13 @@ import { AppError } from "../../errors/app-error.js";
 import { validateRequest } from "../../middlewares/validate-request.middleware.js";
 import { sendSuccess } from "../../utils/response.js";
 import { getProjectById } from "../project/project.service.js";
-import { createTaskSchema } from "./task.schema.js";
+import { createTaskSchema, updateTaskSchema } from "./task.schema.js";
 import {
   createTask,
+  deleteTaskById,
   getTaskByIdAndProjectId,
   listTasksByProject,
+  updateTaskByIdAndProjectId,
 } from "./task.service.js";
 
 const taskRouter = Router({ mergeParams: true });
@@ -24,6 +26,8 @@ type TaskDetailRouteParams = {
 };
 
 type CreateTaskBody = z.infer<typeof createTaskSchema>;
+
+type UpdateTaskBody = z.infer<typeof updateTaskSchema>;
 
 function buildProjectNotFoundError(projectId: string) {
   return new AppError({
@@ -119,6 +123,43 @@ const getTaskDetailHandler: RequestHandler<TaskDetailRouteParams> = async (
   }
 };
 
+const updateTaskHandler: RequestHandler<
+  TaskDetailRouteParams,
+  unknown,
+  UpdateTaskBody
+> = async (req, res, next) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const project = await getProjectById(projectId);
+
+    if (!project) {
+      return next(buildProjectNotFoundError(projectId));
+    }
+
+    const existingTask = await getTaskByIdAndProjectId(projectId, taskId);
+
+    if (!existingTask) {
+      return next(buildTaskNotFoundError(projectId, taskId));
+    }
+
+    const task = await updateTaskByIdAndProjectId(projectId, taskId, req.body);
+    return sendSuccess(
+      res,
+      {
+        task,
+      },
+      {
+        statusCode: 200,
+      },
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return next(buildTaskCodeAlreadyExistsError(req.body.code ?? "unknown"));
+    }
+    next(error);
+  }
+};
+
 const createTaskHandler: RequestHandler<
   TaskRouteParams,
   unknown,
@@ -154,5 +195,9 @@ const createTaskHandler: RequestHandler<
 taskRouter.get("/", listTasksHandler);
 taskRouter.get("/:taskId", getTaskDetailHandler);
 taskRouter.post("/", validateRequest(createTaskSchema), createTaskHandler);
-
+taskRouter.patch(
+  "/:taskId",
+  validateRequest(updateTaskSchema),
+  updateTaskHandler,
+);
 export { taskRouter };
