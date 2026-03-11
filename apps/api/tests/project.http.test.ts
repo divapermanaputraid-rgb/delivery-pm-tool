@@ -6,6 +6,7 @@ import { db } from "../src/lib/db.js";
 
 const createdProjectIds: string[] = [];
 const createdTaskIds: string[] = [];
+const createdMilestoneIds: string[] = [];
 
 describe("Project HTTP routes", () => {
   it("GET /api/v1/projects should return project list", async () => {
@@ -788,7 +789,224 @@ it("DELETE /api/v1/projects/:projectId/tasks/:taskId should return 404 when task
   expect(typeof response.body.meta.requestId).toBe("string");
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
+
+it("POST /api/v1/projects/:projectId/milestones should create milestone", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Milestone Create Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: "Milestone Alpha",
+    });
+
+  expect(response.status).toBe(201);
+  expect(response.body.success).toBe(true);
+  expect(typeof response.body.data.milestone.id).toBe("string");
+  expect(response.body.data.milestone.projectId).toBe(projectId);
+  expect(response.body.data.milestone.name).toBe("Milestone Alpha");
+  expect(response.body.data.milestone.status).toBe("PLANNED");
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+
+  createdMilestoneIds.push(response.body.data.milestone.id);
+});
+
+it("POST /api/v1/projects/:projectId/milestones should reject invalid payload", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Milestone Invalid Payload Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: " ",
+    });
+
+  expect(response.status).toBe(400);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  expect(response.body.meta.details).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        field: "name",
+        message: "Milestone name is required",
+      }),
+    ]),
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("POST /api/v1/projects/:projectId/milestones should return 404 when project does not exist", async () => {
+  const response = await request(app)
+    .post("/api/v1/projects/not-found-id/milestones")
+    .send({
+      name: "Missing project milestone",
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/milestones should return milestone list", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Milestone List Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const firstMilestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Milestone One ${Date.now()}`,
+    });
+
+  expect(firstMilestoneResponse.status).toBe(201);
+  createdMilestoneIds.push(firstMilestoneResponse.body.data.milestone.id);
+
+  const secondMilestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Milestone Two ${Date.now()}`,
+      status: "ACTIVE",
+    });
+
+  expect(secondMilestoneResponse.status).toBe(201);
+  createdMilestoneIds.push(secondMilestoneResponse.body.data.milestone.id);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/milestones`,
+  );
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(Array.isArray(response.body.data.milestones)).toBe(true);
+  expect(response.body.data.milestones.length).toBeGreaterThanOrEqual(2);
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/milestones should return 404 when project does not exist", async () => {
+  const response = await request(app).get(
+    "/api/v1/projects/not-found-id/milestones",
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/milestones/:milestoneId should return milestone detail", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Milestone Detail Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Milestone Detail Target ${Date.now()}`,
+      status: "ACTIVE",
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/milestones/${milestoneId}`,
+  );
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.milestone.id).toBe(milestoneId);
+  expect(response.body.data.milestone.projectId).toBe(projectId);
+  expect(response.body.data.milestone.status).toBe("ACTIVE");
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/milestones/:milestoneId should return 404 when project does not exist", async () => {
+  const response = await request(app).get(
+    "/api/v1/projects/not-found-id/milestones/not-found-milestone-id",
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("PROJECT_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    "Project with id not-found-id not found",
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("GET /api/v1/projects/:projectId/milestones/:milestoneId should return 404 when milestone does not exist in the project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Missing Milestone Detail Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app).get(
+    `/api/v1/projects/${projectId}/milestones/not-found-milestone-id`,
+  );
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("MILESTONE_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Milestone with id not-found-milestone-id not found in project ${projectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
 afterAll(async () => {
+  if (createdMilestoneIds.length > 0) {
+    await db.milestone.deleteMany({
+      where: {
+        id: {
+          in: createdMilestoneIds,
+        },
+      },
+    });
+  }
+
   if (createdTaskIds.length > 0) {
     await db.task.deleteMany({
       where: {
@@ -798,6 +1016,7 @@ afterAll(async () => {
       },
     });
   }
+
   if (createdProjectIds.length > 0) {
     await db.project.deleteMany({
       where: {
