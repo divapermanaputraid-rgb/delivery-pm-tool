@@ -1243,6 +1243,331 @@ it("DELETE /api/v1/projects/:projectId/milestones/:milestoneId should return 404
   expect(typeof response.headers["x-request-id"]).toBe("string");
 });
 
+it("POST /api/v1/projects/:projectId/tasks should create task with milestone", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Milestone Create Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Task Create Milestone Target ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-WITH-MILESTONE-${Date.now()}`,
+      title: "Task with milestone",
+      milestoneId,
+    });
+
+  expect(response.status).toBe(201);
+  expect(response.body.success).toBe(true);
+  expect(typeof response.body.data.task.id).toBe("string");
+  expect(response.body.data.task.projectId).toBe(projectId);
+  expect(response.body.data.task.milestoneId).toBe(milestoneId);
+  expect(response.body.data.task.title).toBe("Task with milestone");
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+
+  createdTaskIds.push(response.body.data.task.id);
+});
+
+it("POST /api/v1/projects/:projectId/tasks should return 404 when milestone does not exist in the project", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Missing Milestone Create Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-MISSING-MILESTONE-${Date.now()}`,
+      title: "Task missing milestone",
+      milestoneId: "not-found-milestone-id",
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("MILESTONE_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Milestone with id not-found-milestone-id not found in project ${projectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("POST /api/v1/projects/:projectId/tasks should return 404 when milestone belongs to different project", async () => {
+  const firstProjectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Cross Milestone A ${Date.now()}` });
+
+  expect(firstProjectResponse.status).toBe(201);
+
+  const firstProjectId = firstProjectResponse.body.data.project.id;
+  createdProjectIds.push(firstProjectId);
+
+  const secondProjectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Cross Milestone B ${Date.now()}` });
+
+  expect(secondProjectResponse.status).toBe(201);
+
+  const secondProjectId = secondProjectResponse.body.data.project.id;
+  createdProjectIds.push(secondProjectId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${secondProjectId}/milestones`)
+    .send({
+      name: `Cross Project Milestone ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const response = await request(app)
+    .post(`/api/v1/projects/${firstProjectId}/tasks`)
+    .send({
+      code: `TASK-CROSS-MILESTONE-${Date.now()}`,
+      title: "Task cross milestone",
+      milestoneId,
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("MILESTONE_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Milestone with id ${milestoneId} not found in project ${firstProjectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should attach task to milestone", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Attach Milestone Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-ATTACH-MILESTONE-${Date.now()}`,
+      title: "Task attach milestone target",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Attach Milestone Target ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${taskId}`)
+    .send({
+      milestoneId,
+    });
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.task.id).toBe(taskId);
+  expect(response.body.data.task.projectId).toBe(projectId);
+  expect(response.body.data.task.milestoneId).toBe(milestoneId);
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should detach milestone when milestoneId is null", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Detach Milestone Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Detach Milestone Target ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-DETACH-MILESTONE-${Date.now()}`,
+      title: "Task detach milestone target",
+      milestoneId,
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${projectId}/tasks/${taskId}`)
+    .send({
+      milestoneId: null,
+    });
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data.task.id).toBe(taskId);
+  expect(response.body.data.task.milestoneId).toBeNull();
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("PATCH /api/v1/projects/:projectId/tasks/:taskId should return 404 when milestone belongs to different project", async () => {
+  const firstProjectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Patch Cross Milestone A ${Date.now()}` });
+
+  expect(firstProjectResponse.status).toBe(201);
+
+  const firstProjectId = firstProjectResponse.body.data.project.id;
+  createdProjectIds.push(firstProjectId);
+
+  const secondProjectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Task Patch Cross Milestone B ${Date.now()}` });
+
+  expect(secondProjectResponse.status).toBe(201);
+
+  const secondProjectId = secondProjectResponse.body.data.project.id;
+  createdProjectIds.push(secondProjectId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${firstProjectId}/tasks`)
+    .send({
+      code: `TASK-PATCH-CROSS-MILESTONE-${Date.now()}`,
+      title: "Task patch cross milestone target",
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${secondProjectId}/milestones`)
+    .send({
+      name: `Patch Cross Milestone Target ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const response = await request(app)
+    .patch(`/api/v1/projects/${firstProjectId}/tasks/${taskId}`)
+    .send({
+      milestoneId,
+    });
+
+  expect(response.status).toBe(404);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error.code).toBe("MILESTONE_NOT_FOUND");
+  expect(response.body.error.message).toBe(
+    `Milestone with id ${milestoneId} not found in project ${firstProjectId}`,
+  );
+  expect(typeof response.body.meta.requestId).toBe("string");
+  expect(typeof response.headers["x-request-id"]).toBe("string");
+});
+
+it("DELETE /api/v1/projects/:projectId/milestones/:milestoneId should set related task milestoneId to null", async () => {
+  const projectResponse = await request(app)
+    .post("/api/v1/projects")
+    .send({ name: `Project Milestone Delete Set Null Test ${Date.now()}` });
+
+  expect(projectResponse.status).toBe(201);
+
+  const projectId = projectResponse.body.data.project.id;
+  createdProjectIds.push(projectId);
+
+  const milestoneResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/milestones`)
+    .send({
+      name: `Set Null Milestone Target ${Date.now()}`,
+    });
+
+  expect(milestoneResponse.status).toBe(201);
+
+  const milestoneId = milestoneResponse.body.data.milestone.id;
+  createdMilestoneIds.push(milestoneId);
+
+  const taskResponse = await request(app)
+    .post(`/api/v1/projects/${projectId}/tasks`)
+    .send({
+      code: `TASK-SET-NULL-${Date.now()}`,
+      title: "Task set null target",
+      milestoneId,
+    });
+
+  expect(taskResponse.status).toBe(201);
+
+  const taskId = taskResponse.body.data.task.id;
+  createdTaskIds.push(taskId);
+
+  const deleteResponse = await request(app).delete(
+    `/api/v1/projects/${projectId}/milestones/${milestoneId}`,
+  );
+
+  expect(deleteResponse.status).toBe(200);
+  expect(deleteResponse.body.success).toBe(true);
+  expect(deleteResponse.body.data.milestone.id).toBe(milestoneId);
+
+  const taskDetailResponse = await request(app).get(
+    `/api/v1/projects/${projectId}/tasks/${taskId}`,
+  );
+
+  expect(taskDetailResponse.status).toBe(200);
+  expect(taskDetailResponse.body.success).toBe(true);
+  expect(taskDetailResponse.body.data.task.id).toBe(taskId);
+  expect(taskDetailResponse.body.data.task.milestoneId).toBeNull();
+  expect(typeof taskDetailResponse.body.meta.requestId).toBe("string");
+  expect(typeof taskDetailResponse.headers["x-request-id"]).toBe("string");
+});
+
 afterAll(async () => {
   if (createdMilestoneIds.length > 0) {
     await db.milestone.deleteMany({

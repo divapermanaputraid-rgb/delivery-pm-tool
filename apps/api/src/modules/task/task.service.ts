@@ -22,6 +22,7 @@ export async function createTask(projectId: string, input: CreateTaskInput) {
   return db.task.create({
     data: {
       projectId,
+      milestoneId: input.milestoneId?.trim(),
       code: input.code.trim(),
       title: input.title.trim(),
       description: input.description,
@@ -81,6 +82,7 @@ export async function updateTaskByIdAndProjectId(
     trackingMode?: UpdateTaskInput["trackingMode"];
     riskFlag?: boolean;
     lastActivityAt?: Date | null;
+    milestoneId?: string | null;
   } = {};
 
   if ("code" in input) {
@@ -123,6 +125,11 @@ export async function updateTaskByIdAndProjectId(
 
   if ("lastActivityAt" in input) {
     data.lastActivityAt = toPatchDate(input.lastActivityAt);
+  }
+
+  if ("milestoneId" in input) {
+    data.milestoneId =
+      input.milestoneId === null ? null : input.milestoneId?.trim();
   }
 
   return db.task.update({

@@ -17,6 +17,11 @@ const taskDescriptionSchema = z
   .trim()
   .max(2000, "Task description must be at most 2000 characters");
 
+const taskMilestoneIdSchema = z
+  .string()
+  .trim()
+  .min(1, "Milestone id is required");
+
 const taskStatusSchema = z.enum([
   "BACKLOG",
   "READY",
@@ -54,6 +59,7 @@ export const createTaskSchema = z.object({
   trackingMode: taskTrackingModeSchema.optional(),
   riskFlag: z.boolean().optional(),
   lastActivityAt: isoDatetimeSchema.optional(),
+  milestoneId: taskMilestoneIdSchema.optional(),
 });
 
 export const updateTaskSchema = z
@@ -73,6 +79,7 @@ export const updateTaskSchema = z
     trackingMode: taskTrackingModeSchema.optional(),
     riskFlag: z.boolean().optional(),
     lastActivityAt: isoDatetimeSchema.nullable().optional(),
+    milestoneId: taskMilestoneIdSchema.nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided",

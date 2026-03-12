@@ -46,6 +46,7 @@ model Project {
 model Task {
     id             String           @id @default(cuid())
     projectId      String
+    milestoneId    String?
     code           String
     title          String
     description    String?
@@ -62,12 +63,14 @@ model Task {
     createdAt      DateTime         @default(now())
     updatedAt      DateTime         @updatedAt
 
-    project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
     @@unique([projectId, code])
     @@index([projectId])
     @@index([projectId, status])
     @@index([projectId, dueDate])
+    @@index([milestoneId])
 }
 
 model Milestone {
@@ -79,9 +82,10 @@ model Milestone {
     dueDate     DateTime?
     status      MilestoneStatus @default(PLANNED)
     createdAt   DateTime        @default(now())
-    updateAt    DateTime        @updatedAt
+    updatedAt   DateTime        @updatedAt
 
     project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    tasks   Task[]
 
     @@index([projectId])
     @@index([projectId, status])

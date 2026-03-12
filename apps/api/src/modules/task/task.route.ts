@@ -5,6 +5,7 @@ import { AppError } from "../../errors/app-error.js";
 import { validateRequest } from "../../middlewares/validate-request.middleware.js";
 import { sendSuccess } from "../../utils/response.js";
 import { getProjectById } from "../project/project.service.js";
+import { getMilestoneByIdAndProjectId } from "../milestone/milestone.service.js";
 import { createTaskSchema, updateTaskSchema } from "./task.schema.js";
 import {
   createTask,
@@ -59,6 +60,14 @@ function buildTaskNotFoundError(projectId: string, taskId: string) {
   return new AppError({
     code: "TASK_NOT_FOUND",
     message: `Task with id ${taskId} not found in project ${projectId}`,
+    statusCode: 404,
+  });
+}
+
+function buildMilestoneNotFoundError(projectId: string, milestoneId: string) {
+  return new AppError({
+    code: "MILESTONE_NOT_FOUND",
+    message: `Milestone with id ${milestoneId} not found in project ${projectId}`,
     statusCode: 404,
   });
 }
@@ -142,6 +151,18 @@ const updateTaskHandler: RequestHandler<
       return next(buildTaskNotFoundError(projectId, taskId));
     }
 
+    if (req.body.milestoneId !== undefined && req.body.milestoneId !== null) {
+      const milestone = await getMilestoneByIdAndProjectId(
+        projectId,
+        req.body.milestoneId,
+      );
+      if (!milestone) {
+        return next(
+          buildMilestoneNotFoundError(projectId, req.body.milestoneId),
+        );
+      }
+    }
+
     const task = await updateTaskByIdAndProjectId(projectId, taskId, req.body);
     return sendSuccess(
       res,
@@ -171,6 +192,19 @@ const createTaskHandler: RequestHandler<
 
     if (!project) {
       return next(buildProjectNotFoundError(projectId));
+    }
+
+    if (req.body.milestoneId !== undefined) {
+      const milestone = await getMilestoneByIdAndProjectId(
+        projectId,
+        req.body.milestoneId,
+      );
+
+      if (!milestone) {
+        return next(
+          buildMilestoneNotFoundError(projectId, req.body.milestoneId),
+        );
+      }
     }
 
     const task = await createTask(projectId, req.body);
