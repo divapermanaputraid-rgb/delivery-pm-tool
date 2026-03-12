@@ -40,8 +40,19 @@ Backend-first MVP for software delivery tracking with GitHub-linked visibility, 
   - `POST /api/v1/projects/:projectId/tasks`
   - `PATCH /api/v1/projects/:projectId/tasks/:taskId`
   - `DELETE /api/v1/projects/:projectId/tasks/:taskId`
-  - Error contracts: `PROJECT_NOT_FOUND`, `TASK_NOT_FOUND`, `TASK_CODE_ALREADY_EXISTS`
-- DB scripts, project-flow script, task runtime script, and API HTTP tests ready
+  - Supports optional `milestoneId` on create/update, and `milestoneId: null` to detach
+  - Error contracts: `PROJECT_NOT_FOUND`, `TASK_NOT_FOUND`, `TASK_CODE_ALREADY_EXISTS`, `MILESTONE_NOT_FOUND`
+- Milestone routes ready:
+  - `GET /api/v1/projects/:projectId/milestones`
+  - `GET /api/v1/projects/:projectId/milestones/:milestoneId`
+  - `POST /api/v1/projects/:projectId/milestones`
+  - `PATCH /api/v1/projects/:projectId/milestones/:milestoneId`
+  - `DELETE /api/v1/projects/:projectId/milestones/:milestoneId`
+  - Error contracts: `PROJECT_NOT_FOUND`, `MILESTONE_NOT_FOUND`
+- Task-Milestone relation ready:
+  - Task has nullable `milestoneId`
+  - Deleting milestone sets related task `milestoneId` to `null` (`onDelete: SetNull`)
+- DB scripts, project-flow script, task runtime script, milestone runtime script, and API HTTP tests ready
 
 ## Commands
 
