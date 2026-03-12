@@ -5,11 +5,16 @@ import { AppError } from "../../errors/app-error.js";
 import { validateRequest } from "../../middlewares/validate-request.middleware.js";
 import { sendSuccess } from "../../utils/response.js";
 import { getProjectById } from "../project/project.service.js";
-import { createMilestoneSchema } from "./milestone.schema.js";
+import {
+  createMilestoneSchema,
+  updateMilestoneSchema,
+} from "./milestone.schema.js";
 import {
   createMilestone,
+  deleteMilestoneById,
   getMilestoneByIdAndProjectId,
   listMilestonesByProject,
+  updateMilestoneByIdAndProjectId,
 } from "./milestone.service.js";
 
 const milestoneRouter = Router({ mergeParams: true });
@@ -24,6 +29,7 @@ type MilestoneDetailRouteParams = {
 };
 
 type CreateMilestoneBody = z.infer<typeof createMilestoneSchema>;
+type UpdateMilestoneBody = z.infer<typeof updateMilestoneSchema>;
 
 function buildProjectNotFoundError(projectId: string) {
   return new AppError({
@@ -101,6 +107,79 @@ const getMilestoneDetailHandler: RequestHandler<
   }
 };
 
+const updateMilestoneHandler: RequestHandler<
+  MilestoneDetailRouteParams,
+  unknown,
+  UpdateMilestoneBody
+> = async (req, res, next) => {
+  try {
+    const { projectId, milestoneId } = req.params;
+    const project = await getProjectById(projectId);
+
+    if (!project) {
+      return next(buildProjectNotFoundError(projectId));
+    }
+    const existingMilestone = await getMilestoneByIdAndProjectId(
+      projectId,
+      milestoneId,
+    );
+    if (!existingMilestone) {
+      return next(buildMilestoneNotFoundError(projectId, milestoneId));
+    }
+
+    const milestone = await updateMilestoneByIdAndProjectId(
+      projectId,
+      milestoneId,
+      req.body,
+    );
+
+    return sendSuccess(
+      res,
+      {
+        milestone,
+      },
+      {
+        statusCode: 200,
+      },
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteMilestoneHandler: RequestHandler<
+  MilestoneDetailRouteParams
+> = async (req, res, next) => {
+  try {
+    const { projectId, milestoneId } = req.params;
+    const project = await getProjectById(projectId);
+
+    if (!project) {
+      return next(buildProjectNotFoundError(projectId));
+    }
+    const existingMilestone = await getMilestoneByIdAndProjectId(
+      projectId,
+      milestoneId,
+    );
+    if (!existingMilestone) {
+      return next(buildMilestoneNotFoundError(projectId, milestoneId));
+    }
+    const milestone = await deleteMilestoneById(milestoneId);
+
+    return sendSuccess(
+      res,
+      {
+        milestone,
+      },
+      {
+        statusCode: 200,
+      },
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createMilestoneHandler: RequestHandler<
   MilestoneRouteParams,
   unknown,
@@ -135,5 +214,11 @@ milestoneRouter.post(
   validateRequest(createMilestoneSchema),
   createMilestoneHandler,
 );
+milestoneRouter.patch(
+  "/:milestoneId",
+  validateRequest(updateMilestoneSchema),
+  updateMilestoneHandler,
+);
+milestoneRouter.delete("/:milestoneId", deleteMilestoneHandler);
 
 export { milestoneRouter };

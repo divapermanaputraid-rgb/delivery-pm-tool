@@ -24,3 +24,16 @@ export const createMilestoneSchema = z.object({
   dueDate: isoDatetimeSchema.optional(),
   status: milestoneStatusSchema.optional(),
 });
+
+export const updateMilestoneSchema = z
+  .object({
+    name: milestoneNameSchema.optional(),
+    description: milestoneDescriptionSchema.nullable().optional(),
+    startDate: isoDatetimeSchema.nullable().optional(),
+    dueDate: isoDatetimeSchema.nullable().optional(),
+    status: milestoneStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+    path: [],
+  });
